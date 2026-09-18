@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
+import 'package:user_profile_app/controllers/auth_controller.dart';
 import 'package:user_profile_app/extensions/build_context_extensions.dart';
 import 'package:user_profile_app/extensions/widget_extensions.dart';
+import 'package:user_profile_app/view/sign_up_screen.dart';
 import 'package:user_profile_app/widgets/auth_page.dart';
 import 'package:user_profile_app/widgets/glass_card.dart';
 import 'package:user_profile_app/widgets/glass_text_field.dart';
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+  const SignInScreen({required this.authController, super.key});
+
+  final AuthController authController;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -18,6 +22,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -26,11 +31,23 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  void _signIn() {
+  Future<void> _signIn() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
-    Navigator.of(context).pushReplacementNamed('/profile');
+    setState(() => _isSubmitting = true);
+    final failure = await widget.authController.signIn(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
+    if (!mounted) return;
+
+    setState(() => _isSubmitting = false);
+    if (failure == AuthFailure.invalidCredentials) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email or password is incorrect.')),
+      );
+    }
   }
 
   void _showUnavailableMessage() {
@@ -105,7 +122,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     4.verticalSpace,
                     FilledButton(
-                      onPressed: _signIn,
+                      onPressed: _isSubmitting ? null : _signIn,
                       style: FilledButton.styleFrom(
                         minimumSize: const Size.fromHeight(54),
                         backgroundColor: context.colors.primary,
@@ -114,19 +131,29 @@ class _SignInScreenState extends State<SignInScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: const Text('Sign in'),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Sign in'),
                     ),
                     20.verticalSpace,
                     Row(
                       children: [
-                        const Expanded(child: Divider(color: Color(0x55FFFFFF))),
+                        const Expanded(
+                          child: Divider(color: Color(0x55FFFFFF)),
+                        ),
                         Text(
                           'or continue with',
                           style: context.textStyles.labelMedium?.copyWith(
                             color: Colors.white.withValues(alpha: 0.58),
                           ),
                         ).padHorizontal(12),
-                        const Expanded(child: Divider(color: Color(0x55FFFFFF))),
+                        const Expanded(
+                          child: Divider(color: Color(0x55FFFFFF)),
+                        ),
                       ],
                     ),
                     20.verticalSpace,
@@ -135,7 +162,9 @@ class _SignInScreenState extends State<SignInScreen> {
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(52),
                         foregroundColor: Colors.white,
-                        side: BorderSide(color: Colors.white.withValues(alpha: 0.30)),
+                        side: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.30),
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -152,10 +181,17 @@ class _SignInScreenState extends State<SignInScreen> {
                 children: [
                   Text(
                     'New here?',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.72),
+                    ),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/sign-up'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) =>
+                            SignUpScreen(authController: widget.authController),
+                      ),
+                    ),
                     child: const Text('Create an account'),
                   ),
                 ],

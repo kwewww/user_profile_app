@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:user_profile_app/controllers/auth_controller.dart';
 import 'package:user_profile_app/extensions/build_context_extensions.dart';
 import 'package:user_profile_app/extensions/widget_extensions.dart';
 import 'package:user_profile_app/widgets/auth_page.dart';
@@ -7,7 +8,9 @@ import 'package:user_profile_app/widgets/glass_card.dart';
 import 'package:user_profile_app/widgets/glass_text_field.dart';
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  const SignUpScreen({required this.authController, super.key});
+
+  final AuthController authController;
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -21,6 +24,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmation = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -31,13 +35,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _createAccount() {
+  Future<void> _createAccount() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Your account has been created.')),
+    setState(() => _isSubmitting = true);
+    final failure = await widget.authController.signUp(
+      name: _nameController.text,
+      email: _emailController.text,
+      password: _passwordController.text,
     );
+    if (!mounted) return;
+
+    setState(() => _isSubmitting = false);
+    if (failure == AuthFailure.emailAlreadyRegistered) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An account already uses this email.')),
+      );
+      return;
+    }
+
+    // Return to the session gate, which now rebuilds as the profile screen.
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
@@ -128,7 +147,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     22.verticalSpace,
                     FilledButton(
-                      onPressed: _createAccount,
+                      onPressed: _isSubmitting ? null : _createAccount,
                       style: FilledButton.styleFrom(
                         minimumSize: const Size.fromHeight(54),
                         backgroundColor: context.colors.primary,
@@ -137,7 +156,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: const Text('Create account'),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Create account'),
                     ),
                   ],
                 ),
@@ -148,10 +173,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 children: [
                   Text(
                     'Already have an account?',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.72),
+                    ),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/sign-in'),
+                    onPressed: () => Navigator.of(context).pop(),
                     child: const Text('Sign in'),
                   ),
                 ],
