@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:user_profile_app/controllers/auth_controller.dart';
+import 'package:user_profile_app/core/app_logger.dart';
 import 'package:user_profile_app/services/user_preferences_service.dart';
 import 'package:user_profile_app/view/sign_in_screen.dart';
 import 'package:user_profile_app/view/user_profile_screen.dart';
@@ -86,9 +87,11 @@ class _SessionGateState extends State<_SessionGate> {
         }
 
         if (widget.authController.isLoggedIn) {
+          AppLogger.info('Session gate rendered the profile screen.');
           return UserProfileScreen(authController: widget.authController);
         }
 
+        AppLogger.info('Session gate rendered the sign-in screen.');
         return SignInScreen(authController: widget.authController);
       },
     );

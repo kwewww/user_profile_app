@@ -54,6 +54,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
       return;
     }
+    if (failure == AuthFailure.storageFailure) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save your account. Check the logs.'),
+        ),
+      );
+      return;
+    }
 
     // Return to the session gate, which now rebuilds as the profile screen.
     Navigator.of(context).popUntil((route) => route.isFirst);

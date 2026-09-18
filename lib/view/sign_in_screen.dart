@@ -45,7 +45,17 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => _isSubmitting = false);
     if (failure == AuthFailure.invalidCredentials) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email or password is incorrect.')),
+        const SnackBar(
+          content: Text(
+            'No matching local account. Create an account first or try again.',
+          ),
+        ),
+      );
+    } else if (failure == AuthFailure.storageFailure) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not access local account data. Check the logs.'),
+        ),
       );
     }
   }
