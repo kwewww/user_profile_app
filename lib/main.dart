@@ -1,14 +1,35 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:user_profile_app/controllers/auth_controller.dart';
+import 'package:user_profile_app/services/user_preferences_service.dart';
 import 'package:user_profile_app/view/sign_in_screen.dart';
-import 'package:user_profile_app/view/sign_up_screen.dart';
 import 'package:user_profile_app/view/user_profile_screen.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends StatefulWidget {
+  const MyApp({super.key, this.authController});
+
+  /// Supplying a controller makes the app straightforward to test.
+  final AuthController? authController;
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final AuthController _authController =
+      widget.authController ?? AuthController(UserPreferencesService());
+  late final bool _ownsAuthController = widget.authController == null;
+
+  @override
+  void dispose() {
+    if (_ownsAuthController) _authController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,11 +52,44 @@ class MyApp extends StatelessWidget {
           suffixIconColor: Color(0xFFD5D1FF),
         ),
       ),
-      initialRoute: '/sign-in',
-      routes: {
-        '/sign-in': (_) => const SignInScreen(),
-        '/sign-up': (_) => const SignUpScreen(),
-        '/profile': (_) => const UserProfileScreen(),
+      home: _SessionGate(authController: _authController),
+    );
+  }
+}
+
+/// Selects the correct view after validating the locally stored active session.
+class _SessionGate extends StatefulWidget {
+  const _SessionGate({required this.authController});
+
+  final AuthController authController;
+
+  @override
+  State<_SessionGate> createState() => _SessionGateState();
+}
+
+class _SessionGateState extends State<_SessionGate> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(widget.authController.restoreSession());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.authController,
+      builder: (context, _) {
+        if (widget.authController.isLoadingSession) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (widget.authController.isLoggedIn) {
+          return UserProfileScreen(authController: widget.authController);
+        }
+
+        return SignInScreen(authController: widget.authController);
       },
     );
   }
